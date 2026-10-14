@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>富謙通訊處 ｜ 專屬頒獎簡報控制台</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #e67e22;
+            --bg: #f5f6fa;
+            --card-bg: #ffffff;
+            --border: #dcdde1;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: var(--primary);
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: var(--primary); margin: 0; font-size: 2.2rem; }
+        .header p { color: #7f8fa6; margin-top: 5px; }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+
+        .panel-title {
+            font-size: 1.3rem; font-weight: bold; margin-bottom: 20px;
+            padding-bottom: 10px; border-bottom: 2px solid var(--primary);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* 資料庫區塊 */
+        .db-list { max-height: 600px; overflow-y: auto; padding-right: 5px; }
+        .db-item {
+            display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px;
+            margin-bottom: 10px; padding: 10px; background: #f8f9fa;
+            border-radius: 8px; border: 1px solid #eee;
+        }
+        .db-item input {
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;
+            box-sizing: border-box; font-size: 0.9rem;
+        }
+        .btn-delete { background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; padding: 5px 10px; }
+        .btn-add { background: #2ecc71; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+
+        /* 表單區塊 */
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 15px; background: #fff; }
+        legend { font-weight: bold; background: var(--primary); color: white; padding: 5px 15px; border-radius: 15px; font-size: 1rem; }
+
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; margin-bottom: 5px; font-size: 0.9rem; color: #555; font-weight: bold;}
+        .input-group > input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .input-row { display: flex; gap: 10px; }
+        .input-row input { flex: 1; min-width: 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+
+        .settings-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 15px; background: #eaf2f8; padding: 15px; border-radius: 8px; }
+        .settings-row input, .settings-row select { padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem; font-weight: bold; }
+
+        /* 快速貼上 */
+        .paste-box { background: #fff8ef; border: 2px dashed var(--accent); border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+        .paste-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-bottom: 10px; font-weight: bold; font-size: 1.1rem; }
+        .paste-hint { font-size: 0.85rem; font-weight: normal; color: #888; }
+        #paste-input { width: 100%; box-sizing: border-box; min-height: 160px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical; }
+        .paste-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+        .btn-parse { background: var(--accent); color: #fff; border: none; padding: 10px 24px; border-radius: 6px; font-size: 1.05rem; font-weight: bold; cursor: pointer; }
+        .btn-parse:hover { background: #d35400; }
+        .btn-clear { background: #bdc3c7; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; }
+        #paste-result { font-size: 0.9rem; line-height: 1.5; }
+        #paste-result .ok { color: #27ae60; font-weight: bold; }
+        #paste-result .warn { color: #c0392b; }
+        .flash { animation: flash 1.2s ease-out; }
+        @keyframes flash { from { background: #fff3a8; } to { background: #fff; } }
+
+        /* 主題預覽 */
+        .theme-preview {
+            display: flex; align-items: center; gap: 18px; padding: 16px 20px; border-radius: 10px;
+            margin-bottom: 20px; min-height: 70px; background-size: cover; background-position: center;
+            border: 1px solid var(--border);
+        }
+        .theme-preview .pv-icon { font-size: 2.6rem; }
+        .theme-preview .pv-badge { padding: 8px 20px; border-radius: 30px; font-weight: bold; color: #fff; }
+        .theme-preview .pv-chips { margin-left: auto; display: flex; gap: 6px; }
+        .theme-preview .pv-chips span { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); }
+        .theme-preview .pv-note { font-size: 0.85rem; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.85); color: #333; }
+
+        .btn-generate {
+            background: var(--accent); color: white; border: none; padding: 20px; border-radius: 8px;
+            font-size: 1.5rem; font-weight: bold; cursor: pointer; width: 100%; margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3); transition: 0.2s;
+        }
+        .btn-generate:hover { background: #d35400; transform: translateY(-2px); }
+        .gen-row { display: flex; gap: 15px; }
+        .gen-row .btn-generate { flex: 1; }
+        .btn-publish { background: #24292f; box-shadow: 0 4px 6px rgba(0,0,0,0.25); }
+        .btn-publish:hover { background: #000; }
+        .btn-publish:disabled { opacity: 0.6; cursor: wait; transform: none; }
+        #gh-result { margin-top: 12px; font-size: 0.95rem; line-height: 1.7; word-break: break-all; }
+        #gh-result a { color: #0969da; font-weight: bold; }
+        .ok { color: #27ae60; font-weight: bold; }
+        .warn { color: #c0392b; }
+        .btn-copy { margin-left: 8px; padding: 3px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
+        #gh-settings { margin-top: 15px; border: 1px solid var(--border); border-radius: 8px; padding: 12px 15px; background: #f6f8fa; }
+        #gh-settings summary { cursor: pointer; font-weight: bold; }
+        .gh-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 15px; margin-top: 12px; }
+        .gh-grid label { font-size: 0.85rem; color: #555; font-weight: bold; }
+        .gh-grid label.full { grid-column: 1 / -1; }
+        .gh-grid input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-weight: normal; }
+        .gh-check { display: block; margin-top: 12px; font-size: 0.9rem; }
+        #gh-url-preview { margin-top: 8px; font-size: 0.85rem; color: #0969da; }
+        .gh-note { font-size: 0.8rem; color: #888; margin: 8px 0 0; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>富謙通訊處 ｜ 🏆 專屬頒獎簡報控制台</h1>
+    <p>修改照片資料、輸入業績，一鍵自動產出各具風格的頒獎簡報檔</p>
+</div>
+
+<div class="dashboard">
+    <!-- 左側：照片資料庫 -->
+    <div class="panel">
+        <div class="panel-title">
+            <span>📂 員工照片資料庫</span>
+            <span style="font-size: 0.8rem; font-weight: normal; color: #888;">自動儲存</span>
+        </div>
+        <div class="db-list" id="photo-db-list"></div>
+        <button class="btn-add" onclick="addPhotoRow()">+ 新增員工資料</button>
+        <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">提示：貼上 Postimages 網址後，系統會自動記憶。未來只要打對名字，就會自動抓取照片。</p>
+    </div>
+
+    <!-- 右側：表單與產出 -->
+    <div class="panel">
+        <div class="panel-title">📝 本月業績輸入與產出設定</div>
+
+        <div class="paste-box">
+            <div class="paste-head">
+                <span>📋 快速貼上業績文字</span>
+                <span class="paste-hint">直接貼上 LINE 公告內容，按「自動帶入」即可填好下方所有欄位</span>
+            </div>
+            <textarea id="paste-input" placeholder="2026年
+(1)(0)月月會之
+(9)工競賽業績排名
+
+MDRT 張珮慈、譚宸泰（可省略）
+
+個人組
+第三 鄭慧娟 33129
+第二 劉晏頤 33288
+第一 鶴田一夫 56393
+
+主管組
+第三 陳伯源 89391
+...
+
+件數
+第三 鄭慧娟2件
+..."></textarea>
+            <div class="paste-actions">
+                <button class="btn-parse" onclick="parsePaste()">⚡ 自動帶入</button>
+                <button class="btn-clear" onclick="document.getElementById('paste-input').value=''; document.getElementById('paste-result').innerHTML='';">清空</button>
+                <div id="paste-result"></div>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div>
+                <input type="text" id="m-year" value="2026" style="width:70px; text-align:center;"> 年
+                第 <input type="text" id="m-month" style="width:55px; text-align:center;"> 月會 ｜
+                第 <input type="text" id="m-comp" value="六" style="width:50px; text-align:center;"> 工
+            </div>
+            <div>
+                <label>背景音樂 (MP3)：</label>
+                <input type="text" id="m-bgm" value="bgm.mp3" placeholder="檔名或網址" style="width:120px;">
+            </div>
+            <div>
+                <label>簡報主題：</label>
+                <select id="m-theme"></select>
+            </div>
+        </div>
+
+        <div class="theme-preview" id="theme-preview"></div>
+
+        <div class="form-grid">
+            <fieldset><legend>👑 MDRT</legend>
+                <div class="input-group"><label>達成者姓名（多人用「、」分隔，留空不顯示）</label><input type="text" id="mdrt-name" placeholder="例：張珮慈、譚宸泰"></div>
+            </fieldset>
+            <fieldset><legend>👤 個人組</legend>
+                <div class="input-group"><label>第一名</label><div class="input-row"><input type="text" id="i-n-1" value="張珮慈"><input type="text" id="i-v-1" value="371084"></div></div>
+                <div class="input-group"><label>第二名</label><div class="input-row"><input type="text" id="i-n-2" value="鶴田一夫"><input type="text" id="i-v-2" value="124029"></div></div>
+                <div class="input-group"><label>第三名</label><div class="input-row"><input type="text" id="i-n-3" value="吳茳蕙"><input type="text" id="i-v-3" value="49526"></div></div>
+            </fieldset>
+            <fieldset><legend>👔 主管組</legend>
+                <div class="input-group"><label>第一名</label><div class="input-row"><input type="text" id="s-n-1" value="譚宸泰"><input type="text" id="s-v-1" value="432814"></div></div>
+                <div class="input-group"><label>第二名</label><div class="input-row"><input type="text" id="s-n-2" value="劉蓉燕"><input type="text" id="s-v-2" value="146605"></div></div>
+                <div class="input-group"><label>第三名</label><div class="input-row"><input type="text" id="s-n-3" value="吳茳蕙"><input type="text" id="s-v-3" value="142532"></div></div>
+            </fieldset>
+            <fieldset><legend>📜 件數獎</legend>
+                <div class="input-group"><label>第一名</label><div class="input-row"><input type="text" id="c-n-1" value="吳茳蕙"><input type="text" id="c-v-1" value="6"></div></div>
+                <div class="input-group"><label>第二名</label><div class="input-row"><input type="text" id="c-n-2" value="張珮慈"><input type="text" id="c-v-2" value="4"></div></div>
+                <div class="input-group"><label>第三名</label><div class="input-row"><input type="text" id="c-n-3" value="鶴田一夫"><input type="text" id="c-v-3" value="3"></div></div>
+            </fieldset>
+        </div>
+
+        <div class="gen-row">
+            <button class="btn-generate" onclick="generatePresentation()">💾 產生並下載 HTML 簡報檔</button>
+            <button class="btn-generate btn-publish" id="btn-publish" onclick="publishToGitHub()">🌐 產生並發布到 GitHub</button>
+        </div>
+        <div id="gh-result"></div>
+
+        <details id="gh-settings">
+            <summary>⚙️ GitHub 設定（只需填一次，會記在這台電腦的瀏覽器）</summary>
+            <div class="gh-grid">
+                <label>GitHub 帳號<input type="text" id="gh-owner" placeholder="例：fuqian-team"></label>
+                <label>倉庫名稱<input type="text" id="gh-repo" placeholder="例：award-slides"></label>
+                <label>分支<input type="text" id="gh-branch" value="main"></label>
+                <label>資料夾（可留空）<input type="text" id="gh-folder" placeholder="例：slides"></label>
+                <label class="full">Personal Access Token<input type="password" id="gh-token" placeholder="github_pat_..."></label>
+            </div>
+            <label class="gh-check"><input type="checkbox" id="gh-index" checked> 同時更新 index.html（固定網址永遠打開最新一期）</label>
+            <div id="gh-url-preview"></div>
+            <p class="gh-note">每次發布會上傳成「年-月.html」（例如 2026-10.html），同月份重發會直接覆蓋。有背景音樂的話，MP3 也要上傳到倉庫的同一個資料夾。</p>
+        </details>
+    </div>
+</div>
+
+<script>
+    // =====================================================
+    // 主題模板庫：要新增主題，複製一組改顏色與文字即可
+    //   months：建議月份（輸入月份時自動切換）
+    //   vars：main 主色 / accent 強調色 / bg 底色 / panel 面板底 / text 文字色
+    //   bg：投影片背景（漸層或圖片網址）
+    //   fx：飄動裝飾 emoji，dir = 'down' 飄落 / 'up' 上升
+    // =====================================================
+    const THEMES = {
+        newyear: {
+            name: '🧧 新春開紅（紅金喜氣風）', months: [1, 2], icon: '🧧',
+            title: '新春開紅 頒獎慶典',
+            vars: { main: '#c62828', accent: '#ffd54f', bg: '#4a0606', panel: 'rgba(110,10,10,0.85)', text: '#fff8e1' },
+            bg: 'radial-gradient(circle at 50% 20%, #c62828 0%, #7f0000 55%, #3e0000 100%)',
+            badge: '🧧 新春開紅 · 鴻運當頭 🧧',
+            labels: {
+                individual: { cat: '個人組', sub: '財神駕到', desc: '招財進寶 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '金鼎領航', desc: '帶領團隊 · 鴻圖大展' },
+                casecount:  { cat: '件數獎', sub: '開門大吉', desc: '好運連連 · 件件順心' }
+            },
+            endText: '新年新氣象，開春開紅盤！<br>願每一份努力，<br>都換來滿滿的收穫！',
+            fx: { emojis: ['🧧', '🏮', '✨', '🍊'], dir: 'up' }
+        },
+        spring: {
+            name: '🌸 櫻花春日（粉嫩花季風）', months: [3, 4], icon: '🌸',
+            title: '櫻花春日 頒獎慶典',
+            vars: { main: '#e91e63', accent: '#7b1fa2', bg: '#fff0f5', panel: 'rgba(255,255,255,0.86)', text: '#4a1c2c' },
+            bg: 'linear-gradient(160deg, #ffe4ec 0%, #fcd5e3 45%, #e1f5fe 100%)',
+            badge: '🌸 春暖花開 · 榮耀綻放 🌸',
+            labels: {
+                individual: { cat: '個人組', sub: '繁花綻放', desc: '春風得意 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '春耕領航', desc: '播種耕耘 · 帶領成長' },
+                casecount:  { cat: '件數獎', sub: '百花齊放', desc: '朵朵盛開 · 業績滿枝' }
+            },
+            endText: '春暖花開，萬象更新！<br>讓每一份努力，<br>像櫻花一樣盛大綻放！',
+            fx: { emojis: ['🌸', '🌸', '💮'], dir: 'down' }
+        },
+        dragon: {
+            name: '🐉 端午龍舟（青綠競渡風）', months: [5, 6], icon: '🐉',
+            title: '端午龍舟 頒獎慶典',
+            vars: { main: '#00796b', accent: '#d84315', bg: '#e0f2f1', panel: 'rgba(255,255,255,0.86)', text: '#004d40' },
+            bg: 'linear-gradient(180deg, #b2ebf2 0%, #80deea 45%, #26a69a 100%)',
+            badge: '🐉 端午競渡 · 奮勇奪標 🐉',
+            labels: {
+                individual: { cat: '個人組', sub: '龍舟奪標', desc: '奮勇爭先 · 一舟當先' },
+                supervisor: { cat: '主管組', sub: '擊鼓領航', desc: '擊鼓催舟 · 齊心協力' },
+                casecount:  { cat: '件數獎', sub: '香粽豐收', desc: '粒粒飽滿 · 業績連綿' }
+            },
+            endText: '划出氣勢，衝出速度！<br>同舟共濟，<br>一起奪下下一面錦標！',
+            fx: { emojis: ['💧', '🌿', '🛶'], dir: 'up' }
+        },
+        summer: {
+            name: '🏖️ 炎炎夏日（玩水度假風）', months: [7, 8], icon: '🏖️',
+            title: '夏日玩水 頒獎慶典',
+            vars: { main: '#0077b6', accent: '#fb8500', bg: '#fefae0', panel: 'rgba(255,255,255,0.85)', text: '#003049' },
+            bg: "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop'), linear-gradient(180deg, #90e0ef 0%, #fefae0 100%)",
+            badge: '🏖️ 夏日出遊 · 榮耀浪潮 🏖️',
+            labels: {
+                individual: { cat: '個人組', sub: '衝浪達人', desc: '乘風破浪 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '航海舵手', desc: '航向偉大 · 領航團隊' },
+                casecount:  { cat: '件數獎', sub: '潛水探險', desc: '深潛探索 · 業績連綿' }
+            },
+            endText: '夏日炎炎，熱情不減！<br>將每一滴汗水化作前進的浪潮，<br>迎向更耀眼的陽光！',
+            fx: { emojis: ['🫧', '🐚', '☀️'], dir: 'up' }
+        },
+        moon: {
+            name: '🌕 中秋皓月（星空月兔風）', months: [9], icon: '🌕',
+            title: '中秋皓月 頒獎慶典',
+            vars: { main: '#F5A623', accent: '#F8E71C', bg: '#0B1D3A', panel: 'rgba(11,29,58,0.8)', text: '#fff' },
+            bg: 'radial-gradient(circle at top right, #1A365D 0%, #0B1D3A 100%)',
+            badge: '🌕 中秋皓月 · 榮耀盛典 🌕',
+            labels: {
+                individual: { cat: '個人組', sub: '奔月先鋒', desc: '乘風破浪 · 摘星攬月' },
+                supervisor: { cat: '主管組', sub: '皎月領航', desc: '指引方向 · 照亮團隊' },
+                casecount:  { cat: '件數獎', sub: '玉兔豐收', desc: '搗藥不息 · 業績連綿' }
+            },
+            endText: '皓月當空，星光璀璨！<br>將每一份努力，<br>化作夜空中最亮的星！',
+            fx: { emojis: ['✨', '⭐', '✨'], dir: 'down' }
+        },
+        halloween: {
+            name: '🎃 萬聖狂歡（南瓜暗夜風）', months: [10], icon: '🎃',
+            title: '萬聖狂歡 頒獎慶典',
+            vars: { main: '#ff7518', accent: '#c77dff', bg: '#1a0b2e', panel: 'rgba(26,11,46,0.86)', text: '#fff' },
+            bg: 'radial-gradient(circle at 80% 15%, #3c1a5b 0%, #1a0b2e 60%, #0d0518 100%)',
+            badge: '🎃 萬聖狂歡 · 魔力全開 🎃',
+            labels: {
+                individual: { cat: '個人組', sub: '南瓜霸主', desc: '魔力全開 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '暗夜領主', desc: '夜行領航 · 統御全場' },
+                casecount:  { cat: '件數獎', sub: '糖果滿袋', desc: '不給糖就搗蛋 · 件件到手' }
+            },
+            endText: '不給業績就搗蛋！<br>把每一次挑戰，<br>都變成最甜的糖果！',
+            fx: { emojis: ['🎃', '🦇', '👻', '🍬'], dir: 'up' }
+        },
+        autumn: {
+            name: '🍁 秋楓豐收（楓紅暖秋風）', months: [11], icon: '🍁',
+            title: '秋楓豐收 頒獎慶典',
+            vars: { main: '#a0522d', accent: '#d84315', bg: '#fff3e0', panel: 'rgba(255,248,240,0.88)', text: '#3e2723' },
+            bg: 'linear-gradient(160deg, #ffe0b2 0%, #ffab91 50%, #8d6e63 100%)',
+            badge: '🍁 金秋豐收 · 碩果累累 🍁',
+            labels: {
+                individual: { cat: '個人組', sub: '楓紅之巔', desc: '層層盡染 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '金秋領航', desc: '春耕秋收 · 帶領豐收' },
+                casecount:  { cat: '件數獎', sub: '碩果累累', desc: '滿倉豐收 · 業績連綿' }
+            },
+            endText: '秋收冬藏，碩果累累！<br>收穫屬於每一位<br>認真耕耘的你！',
+            fx: { emojis: ['🍁', '🍂', '🍁'], dir: 'down' }
+        },
+        christmas: {
+            name: '🎄 聖誕閃耀（紅綠雪夜風）', months: [12], icon: '🎄',
+            title: '聖誕閃耀 頒獎慶典',
+            vars: { main: '#c62828', accent: '#ffd54f', bg: '#0b3d2e', panel: 'rgba(10,50,38,0.86)', text: '#fff' },
+            bg: 'radial-gradient(circle at 50% 0%, #1b5e20 0%, #0b3d2e 55%, #04201a 100%)',
+            badge: '🎄 聖誕閃耀 · 年終榮耀 🎄',
+            labels: {
+                individual: { cat: '個人組', sub: '閃耀之星', desc: '點亮夜空 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '馴鹿領航', desc: '雪夜領路 · 帶領團隊' },
+                casecount:  { cat: '件數獎', sub: '禮物滿滿', desc: '禮物連連 · 件件到手' }
+            },
+            endText: 'Merry Christmas！<br>感謝這一年的每一份努力，<br>明年一起再創高峰！',
+            fx: { emojis: ['❄️', '❄️', '⭐'], dir: 'down' }
+        },
+        classic: {
+            name: '🏆 經典榮耀（黑金通用風）', months: [], icon: '🏆',
+            title: '榮耀盛典 頒獎典禮',
+            vars: { main: '#c9a227', accent: '#ffd700', bg: '#0d0d0d', panel: 'rgba(20,20,20,0.86)', text: '#fff' },
+            bg: 'radial-gradient(circle at 50% 30%, #2b2b2b 0%, #111 60%, #000 100%)',
+            badge: '🏆 榮耀時刻 · 實至名歸 🏆',
+            labels: {
+                individual: { cat: '個人組', sub: '榮耀之星', desc: '卓越表現 · 個人巔峰' },
+                supervisor: { cat: '主管組', sub: '領袖風範', desc: '引領方向 · 成就團隊' },
+                casecount:  { cat: '件數獎', sub: '積沙成塔', desc: '穩健耕耘 · 件件精彩' }
+            },
+            endText: '榮耀屬於每一位努力的夥伴！<br>下個月，舞台等你！',
+            fx: { emojis: ['✨'], dir: 'up' }
+        }
+    };
+
+    // 預設照片資料庫 (第一次使用時會載入，之後存在 localStorage)
+    const defaultPhotoDB = {
+        "吳沛綺": "https://i.postimg.cc/j24t8VqS/S-1048581-0.jpg",
+        "鶴田一夫": "https://i.postimg.cc/63rChhSf/Snipaste-2025-09-14-23-32-19.png",
+        "劉蓉燕": "https://i.postimg.cc/c4srpWgW/Snipaste-2025-09-14-23-15-11.png",
+        "吳茳蕙": "https://i.postimg.cc/SNRv1Fx1/S-1048580-0.jpg",
+        "陳伯源": "https://i.postimg.cc/NFtkQGjy/S-100540426.jpg",
+        "陳世雄": "https://i.postimg.cc/W3z3QsVZ/chen-shi-xiong1.png",
+        "張珮慈": "https://i.postimg.cc/pLbXPB4v/4-B12-CCC1-378-F-4-E0-E-BA4-B-3-E79-DFD973-CE.jpg",
+        "譚宸泰": "https://i.postimg.cc/KjtcTk3w/184385-EE-53-B5-480-F-949-C-AC97-E03-B4284.jpg",
+        "鄭雅婷": "https://i.postimg.cc/yxGhDG9v/C3-CC6494-81-AC-4929-A723-0-CA884-BB99-F5.jpg",
+        "陳冠宏": "https://i.postimg.cc/MpwFYcgx/2949-E309-9-F81-4-DDA-819-F-E0-CFD7897551.jpg",
+        "賴炎新": "https://i.postimg.cc/g0SHwM98/300588.jpg",
+        "張寶方": "https://i.postimg.cc/YCXW8hds/Snipaste-2025-10-18-02-17-49.png",
+        "鄭慧娟": "https://i.postimg.cc/HkXfwGRP/image.png",
+        "老菲": "https://i.postimg.cc/qMPghB6y/PXL-20260529-004732296.jpg",
+        "劉晏頤": "https://i.postimg.cc/2y7gfFbr/957543F8-217C-47C3-94CF-387DCFC3BEB0.jpg"
+    };
+
+    let photoDB = {};
+
+    function initDB() {
+        let saved = null;
+        try { saved = localStorage.getItem('fuqian_photo_db'); } catch (e) {}
+        photoDB = saved ? JSON.parse(saved) : { ...defaultPhotoDB };
+        // 內建名單有新同仁時，自動補進已存的資料庫（不覆蓋已修改過的網址）
+        for (const [n, u] of Object.entries(defaultPhotoDB)) if (!(n in photoDB)) photoDB[n] = u;
+        saveDB();
+        renderDB();
+    }
+    function saveDB() {
+        try { localStorage.setItem('fuqian_photo_db', JSON.stringify(photoDB)); } catch (e) {}
+    }
+    function renderDB() {
+        const list = document.getElementById('photo-db-list');
+        list.innerHTML = '';
+        for (const [name, url] of Object.entries(photoDB)) {
+            const div = document.createElement('div');
+            div.className = 'db-item';
+            div.innerHTML = `
+                <input type="text" value="${name}" onchange="updateName('${name}', this.value)" placeholder="姓名">
+                <input type="text" value="${url}" onchange="updateUrl('${name}', this.value)" placeholder="圖片網址">
+                <button class="btn-delete" onclick="deletePhoto('${name}')">X</button>
+            `;
+            list.appendChild(div);
+        }
+    }
+    window.updateName = function (oldName, newName) {
+        newName = newName.trim();
+        if (oldName === newName || !newName) return;
+        photoDB[newName] = photoDB[oldName];
+        delete photoDB[oldName];
+        saveDB(); renderDB();
+    };
+    window.updateUrl = function (name, newUrl) {
+        photoDB[name] = newUrl.trim();
+        saveDB(); renderDB();
+    };
+    window.deletePhoto = function (name) {
+        if (confirm(`確定要刪除 ${name} 的資料嗎？`)) {
+            delete photoDB[name];
+            saveDB(); renderDB();
+        }
+    };
+    window.addPhotoRow = function () {
+        const newName = "新進同仁" + Math.floor(Math.random() * 1000);
+        photoDB[newName] = "";
+        saveDB(); renderDB();
+    };
+
+    // ----------------------------------------------------
+    // 月份 ↔ 主題
+    // ----------------------------------------------------
+    const CN_NUM = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+    function parseMonth(str) {
+        str = String(str).trim();
+        if (/^\d+$/.test(str)) return parseInt(str, 10);
+        return CN_NUM.indexOf(str);
+    }
+    function themeForMonth(m) {
+        for (const [key, t] of Object.entries(THEMES)) if (t.months.includes(m)) return key;
+        return 'classic';
+    }
+
+    function initThemes() {
+        const sel = document.getElementById('m-theme');
+        sel.innerHTML = Object.entries(THEMES)
+            .map(([k, t]) => `<option value="${k}">${t.name}</option>`).join('');
+
+        const monthInput = document.getElementById('m-month');
+        monthInput.value = CN_NUM[new Date().getMonth() + 1];   // 預設帶入本月
+        sel.value = themeForMonth(parseMonth(monthInput.value));
+
+        monthInput.addEventListener('input', () => {
+            const m = parseMonth(monthInput.value);
+            if (m >= 1 && m <= 12) { sel.value = themeForMonth(m); renderPreview(); }
+        });
+        sel.addEventListener('change', renderPreview);
+        renderPreview();
+    }
+
+    function renderPreview() {
+        const t = THEMES[document.getElementById('m-theme').value];
+        const v = t.vars;
+        const pv = document.getElementById('theme-preview');
+        pv.style.background = t.bg;
+        pv.style.backgroundSize = 'cover';
+        pv.style.backgroundPosition = 'center';
+        const tip = t.months.length ? `建議月份：${t.months.join('、')} 月` : '任何月份皆適用';
+        pv.innerHTML = `
+            <span class="pv-icon">${t.icon}</span>
+            <span class="pv-badge" style="background:${v.main}">${t.badge}</span>
+            <span class="pv-note">${tip}</span>
+            <span class="pv-chips">
+                <span style="background:${v.main}"></span>
+                <span style="background:${v.accent}"></span>
+                <span style="background:${v.bg}"></span>
+            </span>`;
+    }
+
+    initDB();
+    initThemes();
+
+    // ----------------------------------------------------
+    // 快速貼上：解析業績文字並自動填入
+    // ----------------------------------------------------
+    function toCN(n) {
+        n = parseInt(n, 10);
+        if (isNaN(n)) return '';
+        const d = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+        if (n < 10) return d[n];
+        if (n < 20) return '十' + (n % 10 ? d[n % 10] : '');
+        if (n < 100) return d[Math.floor(n / 10)] + '十' + (n % 10 ? d[n % 10] : '');
+        return String(n);
+    }
+    // 把「(1)(0)」「１０」「十」等寫法轉成數字
+    function readNum(s) {
+        s = String(s).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+                     .replace(/[()（）\s]/g, '');
+        if (/^\d+$/.test(s)) return parseInt(s, 10);
+        const d = { 零: 0, 一: 1, 二: 2, 兩: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+        if (s === '十') return 10;
+        let m = s.match(/^([一二三四五六七八九])?十([一二三四五六七八九])?$/);
+        if (m) return (m[1] ? d[m[1]] : 1) * 10 + (m[2] ? d[m[2]] : 0);
+        if (s.length === 1 && s in d) return d[s];
+        return NaN;
+    }
+
+    window.parsePaste = function () {
+        const raw = document.getElementById('paste-input').value;
+        const text = raw.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+                        .replace(/　/g, ' ');
+        const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        const out = document.getElementById('paste-result');
+        if (!lines.length) { out.innerHTML = '<span class="warn">請先貼上業績文字</span>'; return; }
+
+        const filled = [];
+        const warns = [];
+        const setVal = (id, v) => {
+            const el = document.getElementById(id);
+            el.value = v;
+            el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+        };
+
+        // 年、月、工
+        const joined = lines.join(' ');
+        let m;
+        if ((m = joined.match(/(\d{4})\s*年/))) { setVal('m-year', m[1]); filled.push(`${m[1]}年`); }
+        if ((m = joined.match(/((?:[(（]?\s*[\d一二三四五六七八九十]\s*[)）]?\s*)+)月\s*月會/))) {
+            const n = readNum(m[1]);
+            if (n >= 1 && n <= 12) {
+                setVal('m-month', toCN(n));
+                document.getElementById('m-month').dispatchEvent(new Event('input'));
+                filled.push(`${toCN(n)}月`);
+            }
+        }
+        if ((m = joined.match(/((?:[(（]?\s*[\d一二三四五六七八九十]\s*[)）]?\s*)+)工/))) {
+            const n = readNum(m[1]);
+            if (n > 0) { setVal('m-comp', toCN(n)); filled.push(`第${toCN(n)}工`); }
+        }
+
+        // 各組名次
+        const groups = { i: {}, s: {}, c: {} };
+        const groupName = { i: '個人組', s: '主管組', c: '件數' };
+        const rankMap = { 一: 1, 1: 1, 二: 2, 2: 2, 三: 3, 3: 3 };
+        let cur = null;
+        let mdrt = null;
+
+        for (const line of lines) {
+            // MDRT 可寫在同一行：MDRT 張珮慈、譚宸泰
+            if ((m = line.match(/^MDRT\s*[:：]?\s*(.*)$/i))) {
+                cur = 'mdrt';
+                if (m[1]) mdrt = (mdrt ? mdrt + '、' : '') + m[1].trim();
+                continue;
+            }
+            if (/個人/.test(line) && !/第/.test(line)) { cur = 'i'; continue; }
+            if (/主管/.test(line) && !/第/.test(line)) { cur = 's'; continue; }
+            if (/件數/.test(line) && !/第/.test(line)) { cur = 'c'; continue; }
+
+            // 第三 鄭慧娟 33129 ／ 第二 劉晏頤 3件 ／ 第1名：鶴田一夫 56,393
+            m = line.match(/^第?\s*([一二三123])\s*名?\s*[:：.、]?\s*(.+)$/);
+            if (m && cur && cur !== 'mdrt') {
+                const rank = rankMap[m[1]];
+                let rest = m[2].trim();
+                const num = rest.match(/([\d,]+(?:\.\d+)?)\s*(?:件|元)?\s*$/);
+                let name = rest, val = '';
+                if (num) {
+                    val = num[1].replace(/,/g, '');
+                    name = rest.slice(0, num.index).trim();
+                } else if (/從缺/.test(rest)) {
+                    name = '從缺';
+                }
+                name = name.replace(/[:：,，、]$/, '').trim();
+                groups[cur][rank] = { name, val };
+                continue;
+            }
+            if (cur === 'mdrt' && !/月會|競賽|年/.test(line)) {
+                mdrt = (mdrt ? mdrt + '、' : '') + line;
+            }
+        }
+
+        let total = 0;
+        for (const g of ['i', 's', 'c']) {
+            const got = Object.keys(groups[g]).length;
+            if (!got) { warns.push(`沒找到「${groupName[g]}」，該組維持原內容`); continue; }
+            for (let r = 1; r <= 3; r++) {
+                const w = groups[g][r];
+                setVal(`${g}-n-${r}`, w ? w.name : '');
+                setVal(`${g}-v-${r}`, w ? w.val : '');
+                if (w && w.name !== '從缺') {
+                    total++;
+                    if (!photoDB[w.name]) warns.push(`${w.name} 在照片資料庫中沒有照片`);
+                }
+            }
+        }
+        // 有貼 MDRT 才覆蓋；沒貼就清空，避免沿用上個月的名單
+        setVal('mdrt-name', mdrt || '');
+        if (mdrt) filled.push(`MDRT ${mdrt}`);
+
+        const uniqWarns = [...new Set(warns)];
+        out.innerHTML =
+            `<span class="ok">✅ 已帶入 ${total} 位得獎者${filled.length ? '（' + filled.join('、') + '）' : ''}</span>` +
+            (uniqWarns.length ? '<br>' + uniqWarns.map(w => `<span class="warn">⚠️ ${w}</span>`).join('<br>') : '');
+    };
+
+    // ----------------------------------------------------
+    // 簡報執行程式（會被原封不動放進產出的簡報檔中）
+    // ----------------------------------------------------
+    function slideRuntime(D) {
+        const T = D.theme;
+        const NO_PHOTO = 'https://placehold.co/400x600/333/fff?text=NO+PHOTO';
+        const fmt = v => /^\d+$/.test(v) ? Number(v).toLocaleString('en-US') : v;
+        const photoOf = n => D.photos[n] || NO_PHOTO;
+
+        let h = '';
+        // 首頁
+        h += `<div class="slide active"><div class="title-content"><div class="t-icon">${T.icon}</div><h1>富謙通訊處</h1><h2>${D.year}年 ${D.month}月月會 ｜ 第${D.comp}工競賽</h2><div class="badge">${T.badge}</div></div></div>`;
+
+        // MDRT
+        D.mdrt.forEach(name => {
+            h += `<div class="slide"><div class="winner-panel is-first"><div class="winner-info"><span class="cat-tag">👑 MDRT</span><h2 class="rank">百萬圓桌達成</h2><h1 class="name">${name}</h1><div class="score">🎉 恭喜達成 MDRT</div></div><div class="winner-photo"><img src="${photoOf(name)}"></div></div></div>`;
+        });
+
+        // 各獎項（由第三名往第一名揭曉）
+        ['individual', 'supervisor', 'casecount'].forEach(key => {
+            const list = D.awards[key];
+            if (!list || !list.length) return;
+            const L = T.labels[key];
+            h += `<div class="slide"><div class="title-content"><div class="t-icon">${T.icon}</div><h1>${L.cat}<br><span style="color:var(--accent); font-size:0.8em;">${L.sub}</span></h1><h2>${L.desc}</h2></div></div>`;
+            list.slice().sort((a, b) => b.rank - a.rank).forEach(w => {
+                const rStr = ['', '🥇 第一名', '🥈 第二名', '🥉 第三名'][w.rank];
+                const labelStr = key === 'casecount' ? '總件數' : 'FYC';
+                h += `<div class="slide"><div class="winner-panel ${w.rank === 1 ? 'is-first' : ''}"><div class="winner-info"><span class="cat-tag">${L.cat}</span><h2 class="rank">${rStr}</h2><h1 class="name">${w.name}</h1><div class="score">${labelStr}：${fmt(w.val)}</div></div><div class="winner-photo"><img src="${photoOf(w.name)}"></div></div></div>`;
+            });
+        });
+
+        // 結尾
+        h += `<div class="slide"><div class="title-content"><div class="t-icon">${T.icon}</div><h1 class="end-text">${T.endText}</h1></div></div>`;
+        document.getElementById('slideshow').innerHTML = h;
+
+        // 飄動裝飾
+        const fx = document.getElementById('fx');
+        const em = T.fx.emojis;
+        for (let i = 0; i < 22; i++) {
+            const s = document.createElement('span');
+            s.textContent = em[i % em.length];
+            s.className = T.fx.dir === 'up' ? 'rise' : 'fall';
+            s.style.left = (Math.random() * 100) + 'vw';
+            s.style.fontSize = (18 + Math.random() * 26) + 'px';
+            const dur = 9 + Math.random() * 9;
+            s.style.animationDuration = dur + 's';
+            s.style.animationDelay = (-Math.random() * dur) + 's';
+            fx.appendChild(s);
+        }
+
+        // 播放邏輯
+        let cur = 0, bgmPlayed = false;
+        const slides = document.querySelectorAll('.slide');
+        function go(n) {
+            if (!bgmPlayed && D.bgm) {
+                const audio = document.getElementById('bgm');
+                if (audio) { audio.volume = 0.6; audio.play().catch(() => {}); bgmPlayed = true; }
+            }
+            if (n < 0) n = slides.length - 1;
+            if (n >= slides.length) n = 0;
+            slides.forEach((s, i) => s.classList.toggle('active', i === n));
+            cur = n;
+        }
+        document.getElementById('slideshow').addEventListener('click', () => go(cur + 1));
+        document.addEventListener('keydown', e => {
+            if (['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter'].includes(e.key)) go(cur + 1);
+            if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) go(cur - 1);
+        });
+        let lock = false;
+        document.addEventListener('wheel', e => {
+            if (lock) return; lock = true; setTimeout(() => lock = false, 600);
+            if (e.deltaY > 0) go(cur + 1); else if (e.deltaY < 0) go(cur - 1);
+        });
+    }
+
+    // ----------------------------------------------------
+    // 核心引擎：產出簡報 HTML
+    // ----------------------------------------------------
+    function buildPresentation() {
+        const themeKey = document.getElementById('m-theme').value;
+        const t = THEMES[themeKey];
+        const v = t.vars;
+        const month = document.getElementById('m-month').value.trim();
+        const bgm = document.getElementById('m-bgm').value.trim();
+
+        const awards = { individual: [], supervisor: [], casecount: [] };
+        const map = { i: 'individual', s: 'supervisor', c: 'casecount' };
+        Object.entries(map).forEach(([prefix, key]) => {
+            for (let i = 1; i <= 3; i++) {
+                const name = document.getElementById(`${prefix}-n-${i}`).value.trim();
+                const val = document.getElementById(`${prefix}-v-${i}`).value.trim();
+                if (name && name !== '從缺') awards[key].push({ rank: i, name, val });
+            }
+        });
+
+        const mdrt = document.getElementById('mdrt-name').value
+            .split(/[、,，\s]+/).map(s => s.trim()).filter(Boolean);
+
+        const data = {
+            awards, mdrt, bgm,
+            photos: photoDB,
+            year: document.getElementById('m-year').value.trim(),
+            month,
+            comp: document.getElementById('m-comp').value.trim(),
+            theme: t
+        };
+        const dataJSON = JSON.stringify(data).replace(/</g, '\\u003c');
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+        const css = `
+:root { --main:${v.main}; --accent:${v.accent}; --bg:${v.bg}; --panel-bg:${v.panel}; --text:${v.text}; }
+body, html { margin:0; padding:0; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif; user-select:none; }
+#slideshow { width:100%; height:100%; position:relative; cursor:pointer; }
+.slide { width:100%; height:100%; position:absolute; top:0; left:0; display:flex; justify-content:center; align-items:center; opacity:0; visibility:hidden; transition:0.8s ease-in-out; background:${t.bg}; background-size:cover; background-position:center; }
+.slide.active { opacity:1; visibility:visible; }
+
+.title-content { text-align:center; z-index:20; padding:60px 100px; background:var(--panel-bg); border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.5); border:4px solid var(--accent); backdrop-filter:blur(10px); }
+.title-content h1 { font-size:5rem; margin:0; color:var(--text); text-shadow:2px 2px 0 var(--main); }
+.title-content h1.end-text { font-size:3.6rem; line-height:1.5; }
+.title-content h2 { font-size:3rem; color:var(--main); margin:20px 0; }
+.t-icon { font-size:4.5rem; margin-bottom:10px; animation:bob 2.4s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-12px); } }
+.badge { display:inline-block; background:var(--main); color:#fff; padding:15px 40px; font-size:2.2rem; border-radius:50px; font-weight:bold; margin-top:20px; }
+
+.winner-panel { display:flex; width:85%; max-width:1200px; height:60%; background:var(--panel-bg); border-radius:30px; align-items:center; padding:40px 60px; border:4px solid var(--main); box-shadow:0 30px 60px rgba(0,0,0,0.5); backdrop-filter:blur(10px); z-index:20; }
+.winner-info { flex:1; padding-right:40px; }
+.cat-tag { font-size:1.8rem; background:var(--main); color:#fff; padding:5px 20px; border-radius:50px; display:inline-block; margin-bottom:15px; font-weight:bold; }
+.rank { font-size:4.5rem; color:var(--accent); margin:0; font-weight:900; text-shadow:1px 1px 0 rgba(0,0,0,0.25); }
+.name { font-size:6rem; color:var(--text); margin:10px 0 20px; font-weight:bold; }
+.score { font-size:2.8rem; background:var(--bg); color:var(--text); border:3px solid var(--accent); display:inline-block; padding:15px 30px; border-radius:50px; font-weight:bold; }
+.winner-photo img { width:350px; height:450px; object-fit:cover; border:10px solid #fff; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.4); transform:rotate(3deg); }
+.is-first { border-color:var(--accent); animation:pulse 2s infinite alternate; }
+@keyframes pulse { from { box-shadow:0 0 20px var(--main); } to { box-shadow:0 0 60px var(--accent); } }
+
+#fx { position:fixed; inset:0; pointer-events:none; z-index:10; overflow:hidden; }
+#fx span { position:absolute; opacity:0.75; animation-timing-function:linear; animation-iteration-count:infinite; }
+#fx .fall { top:-60px; animation-name:fall; }
+#fx .rise { bottom:-60px; animation-name:rise; }
+@keyframes fall { from { transform:translateY(0) rotate(0deg); } to { transform:translateY(115vh) rotate(360deg); } }
+@keyframes rise { from { transform:translateY(0) rotate(0deg); } to { transform:translateY(-115vh) rotate(-30deg); } }`;
+
+        const finalHTML =
+`<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>富謙通訊處 | ${esc(t.title)}</title>
+<style>${css}
+</style>
+</head>
+<body>
+${bgm ? `<audio id="bgm" src="${esc(bgm)}" loop preload="auto"></audio>` : ''}
+<div id="fx"></div>
+<div id="slideshow"></div>
+<script>
+(${slideRuntime.toString()})(${dataJSON});
+<\/script>
+</body>
+</html>`;
+
+        return { html: finalHTML, month, themeKey, year: data.year };
+    }
+
+    function generatePresentation() {
+        const p = buildPresentation();
+        const blob = new Blob([p.html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `富謙頒獎簡報_${p.month}月_${p.themeKey}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    // ----------------------------------------------------
+    // GitHub 自動部署（GitHub Pages）
+    // ----------------------------------------------------
+    const GH_KEY = 'fuqian_github_cfg';
+    const GH_FIELDS = ['gh-owner', 'gh-repo', 'gh-branch', 'gh-folder', 'gh-token'];
+
+    function loadGhCfg() {
+        let cfg = {};
+        try { cfg = JSON.parse(localStorage.getItem(GH_KEY) || '{}'); } catch (e) {}
+        GH_FIELDS.forEach(id => { if (cfg[id] != null) document.getElementById(id).value = cfg[id]; });
+        updateGhUrlPreview();
+    }
+    function saveGhCfg() {
+        const cfg = {};
+        GH_FIELDS.forEach(id => cfg[id] = document.getElementById(id).value.trim());
+        try { localStorage.setItem(GH_KEY, JSON.stringify(cfg)); } catch (e) {}
+        updateGhUrlPreview();
+    }
+    function ghCfg() {
+        const g = id => document.getElementById(id).value.trim();
+        return {
+            owner: g('gh-owner'), repo: g('gh-repo'), branch: g('gh-branch') || 'main',
+            folder: g('gh-folder').replace(/^\/+|\/+$/g, ''), token: g('gh-token').replace(/\s+/g, '')
+        };
+    }
+    function pagesBase(c) {
+        // 倉庫名稱為 帳號.github.io 時，網址沒有倉庫名稱這一層
+        const root = c.repo.toLowerCase() === `${c.owner.toLowerCase()}.github.io`
+            ? `https://${c.owner}.github.io/`
+            : `https://${c.owner}.github.io/${c.repo}/`;
+        return root + (c.folder ? c.folder + '/' : '');
+    }
+    function updateGhUrlPreview() {
+        const c = ghCfg();
+        const el = document.getElementById('gh-url-preview');
+        el.textContent = (c.owner && c.repo) ? `發布後網址：${pagesBase(c)}` : '';
+    }
+
+    function toBase64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let bin = '';
+        for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+        return btoa(bin);
+    }
+
+    async function ghPut(c, path, content, message) {
+        const api = `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${path.split('/').map(encodeURIComponent).join('/')}`;
+        const headers = { 'Authorization': `Bearer ${c.token}`, 'Accept': 'application/vnd.github+json' };
+        // 檔案已存在時需要帶 sha 才能覆蓋
+        let sha;
+        const head = await fetch(`${api}?ref=${encodeURIComponent(c.branch)}`, { headers, cache: 'no-store' });
+        if (head.ok) sha = (await head.json()).sha;
+        else if (head.status !== 404) throw new Error(await ghErr(head));
+        const res = await fetch(api, {
+            method: 'PUT', headers,
+            body: JSON.stringify({ message, content: toBase64(content), branch: c.branch, ...(sha ? { sha } : {}) })
+        });
+        if (!res.ok) throw new Error(await ghErr(res));
+    }
+    async function ghErr(res) {
+        let msg = '';
+        try { msg = (await res.json()).message || ''; } catch (e) {}
+        const hint = {
+            401: 'Token 無效或已過期',
+            403: 'Token 沒有寫入權限（需要 Contents：Read and write）',
+            404: '找不到倉庫，請確認帳號、倉庫名稱，以及 Token 是否有權限存取這個倉庫',
+            409: '分支名稱不對，或倉庫是空的（請先在 GitHub 建立一個 README）',
+            422: '分支名稱不對或檔案內容有誤'
+        }[res.status] || '';
+        return `GitHub 回應 ${res.status}${hint ? '：' + hint : ''}${msg ? `（${msg}）` : ''}`;
+    }
+
+    window.publishToGitHub = async function () {
+        const c = ghCfg();
+        const out = document.getElementById('gh-result');
+        const btn = document.getElementById('btn-publish');
+        if (!c.owner || !c.repo || !c.token) {
+            out.innerHTML = '<span class="warn">請先在「GitHub 設定」填好帳號、倉庫名稱和 Token</span>';
+            document.getElementById('gh-settings').open = true;
+            return;
+        }
+        const p = buildPresentation();
+        const mm = String(parseMonth(p.month)).padStart(2, '0');
+        const fileName = (parseMonth(p.month) >= 1) ? `${p.year}-${mm}.html` : `${p.year}-${Date.now()}.html`;
+        const dir = c.folder ? c.folder + '/' : '';
+        btn.disabled = true;
+        out.innerHTML = '⏳ 上傳中…';
+        try {
+            await ghPut(c, dir + fileName, p.html, `頒獎簡報 ${p.year}年${p.month}月`);
+            if (document.getElementById('gh-index').checked) {
+                await ghPut(c, dir + 'index.html', p.html, `更新最新頒獎簡報 ${p.year}年${p.month}月`);
+            }
+            const url = pagesBase(c) + fileName;
+            const latest = pagesBase(c);
+            out.innerHTML =
+                `<span class="ok">✅ 已上傳！GitHub Pages 約 1～2 分鐘後更新</span><br>` +
+                `本月簡報：<a href="${url}" target="_blank">${url}</a>` +
+                (document.getElementById('gh-index').checked ? `<br>最新一期：<a href="${latest}" target="_blank">${latest}</a>` : '') +
+                ` <button class="btn-copy" onclick="navigator.clipboard.writeText('${url}'); this.textContent='已複製';">複製網址</button>`;
+        } catch (e) {
+            const netFail = e instanceof TypeError || /fetch|network|load failed/i.test(e.message);
+            out.innerHTML = netFail
+                ? `<span class="warn">❌ 上傳失敗：連不上 GitHub（${e.message}）</span><br>` +
+                  `<span class="warn">請確認：① 是把控制台檔案下載到電腦後，用 Chrome 直接開啟（不是在聊天視窗或預覽裡開）` +
+                  `② 關閉廣告阻擋等瀏覽器外掛再試 ③ 公司網路可能擋 GitHub，可改用手機熱點測試</span>`
+                : `<span class="warn">❌ 上傳失敗：${e.message}</span>`;
+        } finally {
+            btn.disabled = false;
+        }
+    };
+
+    GH_FIELDS.forEach(id => document.getElementById(id).addEventListener('change', saveGhCfg));
+    loadGhCfg();
+</script>
+</body>
+</html>
