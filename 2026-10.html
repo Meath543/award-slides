@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>富謙通訊處 | 萬聖狂歡 頒獎慶典</title>
+<style>
+:root { --main:#ff7518; --accent:#c77dff; --bg:#1a0b2e; --panel-bg:rgba(26,11,46,0.86); --text:#fff; }
+body, html { margin:0; padding:0; height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif; user-select:none; }
+#slideshow { width:100%; height:100%; position:relative; cursor:pointer; }
+.slide { width:100%; height:100%; position:absolute; top:0; left:0; display:flex; justify-content:center; align-items:center; opacity:0; visibility:hidden; transition:0.8s ease-in-out; background:radial-gradient(circle at 80% 15%, #3c1a5b 0%, #1a0b2e 60%, #0d0518 100%); background-size:cover; background-position:center; }
+.slide.active { opacity:1; visibility:visible; }
+
+.title-content { text-align:center; z-index:20; padding:60px 100px; background:var(--panel-bg); border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.5); border:4px solid var(--accent); backdrop-filter:blur(10px); }
+.title-content h1 { font-size:5rem; margin:0; color:var(--text); text-shadow:2px 2px 0 var(--main); }
+.title-content h1.end-text { font-size:3.6rem; line-height:1.5; }
+.title-content h2 { font-size:3rem; color:var(--main); margin:20px 0; }
+.t-icon { font-size:4.5rem; margin-bottom:10px; animation:bob 2.4s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-12px); } }
+.badge { display:inline-block; background:var(--main); color:#fff; padding:15px 40px; font-size:2.2rem; border-radius:50px; font-weight:bold; margin-top:20px; }
+
+.winner-panel { display:flex; width:85%; max-width:1200px; height:60%; background:var(--panel-bg); border-radius:30px; align-items:center; padding:40px 60px; border:4px solid var(--main); box-shadow:0 30px 60px rgba(0,0,0,0.5); backdrop-filter:blur(10px); z-index:20; }
+.winner-info { flex:1; padding-right:40px; }
+.cat-tag { font-size:1.8rem; background:var(--main); color:#fff; padding:5px 20px; border-radius:50px; display:inline-block; margin-bottom:15px; font-weight:bold; }
+.rank { font-size:4.5rem; color:var(--accent); margin:0; font-weight:900; text-shadow:1px 1px 0 rgba(0,0,0,0.25); }
+.name { font-size:6rem; color:var(--text); margin:10px 0 20px; font-weight:bold; }
+.score { font-size:2.8rem; background:var(--bg); color:var(--text); border:3px solid var(--accent); display:inline-block; padding:15px 30px; border-radius:50px; font-weight:bold; }
+.winner-photo img { width:350px; height:450px; object-fit:cover; border:10px solid #fff; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.4); transform:rotate(3deg); }
+.is-first { border-color:var(--accent); animation:pulse 2s infinite alternate; }
+@keyframes pulse { from { box-shadow:0 0 20px var(--main); } to { box-shadow:0 0 60px var(--accent); } }
+
+#fx { position:fixed; inset:0; pointer-events:none; z-index:10; overflow:hidden; }
+#fx span { position:absolute; opacity:0.75; animation-timing-function:linear; animation-iteration-count:infinite; }
+#fx .fall { top:-60px; animation-name:fall; }
+#fx .rise { bottom:-60px; animation-name:rise; }
+@keyframes fall { from { transform:translateY(0) rotate(0deg); } to { transform:translateY(115vh) rotate(360deg); } }
+@keyframes rise { from { transform:translateY(0) rotate(0deg); } to { transform:translateY(-115vh) rotate(-30deg); } }
+</style>
+</head>
+<body>
+<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+<div id="fx"></div>
+<div id="slideshow"></div>
+<script>
+(function slideRuntime(D) {
+        const T = D.theme;
+        const NO_PHOTO = 'https://placehold.co/400x600/333/fff?text=NO+PHOTO';
+        const fmt = v => /^\d+$/.test(v) ? Number(v).toLocaleString('en-US') : v;
+        const photoOf = n => D.photos[n] || NO_PHOTO;
+
+        let h = '';
+        // 首頁
+        h += `<div class="slide active"><div class="title-content"><div class="t-icon">${T.icon}</div><h1>富謙通訊處</h1><h2>${D.year}年 ${D.month}月月會 ｜ 第${D.comp}工競賽</h2><div class="badge">${T.badge}</div></div></div>`;
+
+        // MDRT
+        D.mdrt.forEach(name => {
+            h += `<div class="slide"><div class="winner-panel is-first"><div class="winner-info"><span class="cat-tag">👑 MDRT</span><h2 class="rank">百萬圓桌達成</h2><h1 class="name">${name}</h1><div class="score">🎉 恭喜達成 MDRT</div></div><div class="winner-photo"><img src="${photoOf(name)}"></div></div></div>`;
+        });
+
+        // 各獎項（由第三名往第一名揭曉）
+        ['individual', 'supervisor', 'casecount'].forEach(key => {
+            const list = D.awards[key];
+            if (!list || !list.length) return;
+            const L = T.labels[key];
+            h += `<div class="slide"><div class="title-content"><div class="t-icon">${T.icon}</div><h1>${L.cat}<br><span style="color:var(--accent); font-size:0.8em;">${L.sub}</span></h1><h2>${L.desc}</h2></div></div>`;
+            list.slice().sort((a, b) => b.rank - a.rank).forEach(w => {
+                const rStr = ['', '🥇 第一名', '🥈 第二名', '🥉 第三名'][w.rank];
+                const labelStr = key === 'casecount' ? '總件數' : 'FYC';
+                h += `<div class="slide"><div class="winner-panel ${w.rank === 1 ? 'is-first' : ''}"><div class="winner-info"><span class="cat-tag">${L.cat}</span><h2 class="rank">${rStr}</h2><h1 class="name">${w.name}</h1><div class="score">${labelStr}：${fmt(w.val)}</div></div><div class="winner-photo"><img src="${photoOf(w.name)}"></div></div></div>`;
+            });
+        });
+
+        // 結尾
+        h += `<div class="slide"><div class="title-content"><div class="t-icon">${T.icon}</div><h1 class="end-text">${T.endText}</h1></div></div>`;
+        document.getElementById('slideshow').innerHTML = h;
+
+        // 飄動裝飾
+        const fx = document.getElementById('fx');
+        const em = T.fx.emojis;
+        for (let i = 0; i < 22; i++) {
+            const s = document.createElement('span');
+            s.textContent = em[i % em.length];
+            s.className = T.fx.dir === 'up' ? 'rise' : 'fall';
+            s.style.left = (Math.random() * 100) + 'vw';
+            s.style.fontSize = (18 + Math.random() * 26) + 'px';
+            const dur = 9 + Math.random() * 9;
+            s.style.animationDuration = dur + 's';
+            s.style.animationDelay = (-Math.random() * dur) + 's';
+            fx.appendChild(s);
+        }
+
+        // 播放邏輯
+        let cur = 0, bgmPlayed = false;
+        const slides = document.querySelectorAll('.slide');
+        function go(n) {
+            if (!bgmPlayed && D.bgm) {
+                const audio = document.getElementById('bgm');
+                if (audio) { audio.volume = 0.6; audio.play().catch(() => {}); bgmPlayed = true; }
+            }
+            if (n < 0) n = slides.length - 1;
+            if (n >= slides.length) n = 0;
+            slides.forEach((s, i) => s.classList.toggle('active', i === n));
+            cur = n;
+        }
+        document.getElementById('slideshow').addEventListener('click', () => go(cur + 1));
+        document.addEventListener('keydown', e => {
+            if (['ArrowRight', 'ArrowDown', ' ', 'PageDown', 'Enter'].includes(e.key)) go(cur + 1);
+            if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) go(cur - 1);
+        });
+        let lock = false;
+        document.addEventListener('wheel', e => {
+            if (lock) return; lock = true; setTimeout(() => lock = false, 600);
+            if (e.deltaY > 0) go(cur + 1); else if (e.deltaY < 0) go(cur - 1);
+        });
+    })({"awards":{"individual":[{"rank":1,"name":"鶴田一夫","val":"56393"},{"rank":2,"name":"劉晏頤","val":"33288"},{"rank":3,"name":"鄭慧娟","val":"33129"}],"supervisor":[{"rank":1,"name":"譚宸泰","val":"129839"},{"rank":2,"name":"吳茳蕙","val":"124867"},{"rank":3,"name":"陳伯源","val":"89391"}],"casecount":[{"rank":1,"name":"鶴田一夫","val":"3"},{"rank":2,"name":"劉晏頤","val":"3"},{"rank":3,"name":"鄭慧娟","val":"2"}]},"mdrt":[],"bgm":"bgm.mp3","photos":{"吳沛綺":"https://i.postimg.cc/j24t8VqS/S-1048581-0.jpg","鶴田一夫":"https://i.postimg.cc/63rChhSf/Snipaste-2025-09-14-23-32-19.png","劉蓉燕":"https://i.postimg.cc/c4srpWgW/Snipaste-2025-09-14-23-15-11.png","吳茳蕙":"https://i.postimg.cc/SNRv1Fx1/S-1048580-0.jpg","陳伯源":"https://i.postimg.cc/NFtkQGjy/S-100540426.jpg","陳世雄":"https://i.postimg.cc/W3z3QsVZ/chen-shi-xiong1.png","張珮慈":"https://i.postimg.cc/pLbXPB4v/4-B12-CCC1-378-F-4-E0-E-BA4-B-3-E79-DFD973-CE.jpg","譚宸泰":"https://i.postimg.cc/KjtcTk3w/184385-EE-53-B5-480-F-949-C-AC97-E03-B4284.jpg","鄭雅婷":"https://i.postimg.cc/yxGhDG9v/C3-CC6494-81-AC-4929-A723-0-CA884-BB99-F5.jpg","陳冠宏":"https://i.postimg.cc/MpwFYcgx/2949-E309-9-F81-4-DDA-819-F-E0-CFD7897551.jpg","賴炎新":"https://i.postimg.cc/g0SHwM98/300588.jpg","張寶方":"https://i.postimg.cc/YCXW8hds/Snipaste-2025-10-18-02-17-49.png","鄭慧娟":"https://i.postimg.cc/HkXfwGRP/image.png","老菲":"https://i.postimg.cc/qMPghB6y/PXL-20260529-004732296.jpg","劉晏頤":"https://i.postimg.cc/2y7gfFbr/957543F8-217C-47C3-94CF-387DCFC3BEB0.jpg"},"year":"2026","month":"十","comp":"九","theme":{"name":"🎃 萬聖狂歡（南瓜暗夜風）","months":[10],"icon":"🎃","title":"萬聖狂歡 頒獎慶典","vars":{"main":"#ff7518","accent":"#c77dff","bg":"#1a0b2e","panel":"rgba(26,11,46,0.86)","text":"#fff"},"bg":"radial-gradient(circle at 80% 15%, #3c1a5b 0%, #1a0b2e 60%, #0d0518 100%)","badge":"🎃 萬聖狂歡 · 魔力全開 🎃","labels":{"individual":{"cat":"個人組","sub":"南瓜霸主","desc":"魔力全開 · 個人巔峰"},"supervisor":{"cat":"主管組","sub":"暗夜領主","desc":"夜行領航 · 統御全場"},"casecount":{"cat":"件數獎","sub":"糖果滿袋","desc":"不給糖就搗蛋 · 件件到手"}},"endText":"不給業績就搗蛋！\u003cbr>把每一次挑戰，\u003cbr>都變成最甜的糖果！","fx":{"emojis":["🎃","🦇","👻","🍬"],"dir":"up"}}});
+</script>
+</body>
+</html>
