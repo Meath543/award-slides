@@ -18,16 +18,32 @@ body, html { margin:0; padding:0; height:100%; overflow:hidden; background:var(-
 @keyframes bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-12px); } }
 .badge { display:inline-block; background:var(--main); color:#fff; padding:15px 40px; font-size:2.2rem; border-radius:50px; font-weight:bold; margin-top:20px; }
 
-.winner-panel { display:flex; width:85%; max-width:1200px; height:60%; background:var(--panel-bg); border-radius:30px; align-items:center; padding:40px 60px; border:4px solid var(--main); box-shadow:0 30px 60px rgba(0,0,0,0.5); backdrop-filter:blur(10px); z-index:20; }
-.winner-info { flex:1; padding-right:40px; }
-.cat-tag { font-size:1.8rem; background:var(--main); color:#fff; padding:5px 20px; border-radius:50px; display:inline-block; margin-bottom:15px; font-weight:bold; }
-.rank { font-size:4.5rem; color:var(--accent); margin:0; font-weight:900; text-shadow:1px 1px 0 rgba(0,0,0,0.25); }
-.name { font-size:6rem; color:var(--text); margin:10px 0 20px; font-weight:bold; }
-.score { font-size:2.8rem; background:var(--bg); color:var(--text); border:3px solid var(--accent); display:inline-block; padding:15px 30px; border-radius:50px; font-weight:bold; }
-.winner-photo img { width:350px; height:450px; object-fit:cover; border:10px solid #fff; border-radius:15px; box-shadow:0 20px 40px rgba(0,0,0,0.4); transform:rotate(3deg); }
+.winner-panel { display:flex; width:92vw; max-width:1750px; height:84vh; background:var(--panel-bg); border-radius:30px; align-items:center; gap:3vw; padding:2vh 3vw; box-sizing:border-box; border:4px solid var(--main); box-shadow:0 30px 60px rgba(0,0,0,0.5); backdrop-filter:blur(10px); z-index:20; }
+.winner-info { flex:1; min-width:0; }
+.cat-tag { font-size:clamp(1.2rem,2vw,2rem); background:var(--main); color:#fff; padding:5px 22px; border-radius:50px; display:inline-block; margin-bottom:15px; font-weight:bold; }
+.rank { font-size:clamp(2.5rem,4.2vw,5rem); color:var(--accent); margin:0; font-weight:900; text-shadow:1px 1px 0 rgba(0,0,0,0.25); }
+.name { font-size:clamp(3.5rem,6.5vw,8rem); color:var(--text); margin:1vh 0 3vh; font-weight:bold; line-height:1.1; }
+.score { font-size:clamp(1.6rem,2.8vw,3.2rem); background:var(--bg); color:var(--text); border:3px solid var(--accent); display:inline-block; padding:12px 30px; border-radius:50px; font-weight:bold; }
+
+/* 得獎者照片：佔滿面板高度，帶光暈與進場放大 */
+.winner-photo { position:relative; height:78vh; aspect-ratio:3/4; max-width:48vw; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.winner-photo::before { content:''; position:absolute; inset:-6%; border-radius:50%; background:radial-gradient(circle, var(--accent) 0%, transparent 65%); opacity:0.55; filter:blur(20px); animation:glow 2.5s ease-in-out infinite alternate; }
+.winner-photo img { position:relative; width:100%; height:100%; object-fit:cover; object-position:center top; border:12px solid #fff; border-radius:20px; box-sizing:border-box; box-shadow:0 0 0 5px var(--accent), 0 25px 60px rgba(0,0,0,0.55); transform:rotate(2deg); }
+.slide.active .winner-photo img { animation:photoIn 0.9s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes photoIn { from { transform:scale(0.6) rotate(-8deg); opacity:0; } to { transform:scale(1) rotate(2deg); opacity:1; } }
+@keyframes glow { from { opacity:0.35; transform:scale(0.95); } to { opacity:0.75; transform:scale(1.05); } }
+
 .is-first { border-color:var(--accent); animation:pulse 2s infinite alternate; }
+.is-first .winner-photo img { box-shadow:0 0 0 6px var(--accent), 0 0 50px var(--accent), 0 25px 60px rgba(0,0,0,0.55); }
+.is-first .winner-photo::after { content:'👑'; position:absolute; top:-7%; left:50%; transform:translateX(-50%) rotate(-8deg); font-size:clamp(3rem,6vh,5rem); filter:drop-shadow(0 4px 6px rgba(0,0,0,0.4)); z-index:2; }
 @keyframes pulse { from { box-shadow:0 0 20px var(--main); } to { box-shadow:0 0 60px var(--accent); } }
 
+#music-btn { position:fixed; right:24px; bottom:24px; z-index:50; display:flex; align-items:center; gap:8px; padding:10px 18px; border:none; border-radius:40px; background:rgba(0,0,0,0.6); color:#fff; font-size:1.1rem; font-weight:bold; cursor:pointer; font-family:inherit; animation:hint 1.6s ease-in-out infinite; }
+#music-btn .mi { font-size:1.5rem; }
+#music-btn.compact { padding:8px 10px; opacity:0.35; animation:none; }
+#music-btn.compact:hover { opacity:0.9; }
+#music-btn.compact .mt { display:none; }
+@keyframes hint { 0%,100% { transform:scale(1); } 50% { transform:scale(1.06); } }
 #fx { position:fixed; inset:0; pointer-events:none; z-index:10; overflow:hidden; }
 #fx span { position:absolute; opacity:0.75; animation-timing-function:linear; animation-iteration-count:infinite; }
 #fx .fall { top:-60px; animation-name:fall; }
@@ -37,7 +53,7 @@ body, html { margin:0; padding:0; height:100%; overflow:hidden; background:var(-
 </style>
 </head>
 <body>
-<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio><button id="music-btn"><span class="mi">🔇</span><span class="mt"></span></button>
 <div id="fx"></div>
 <div id="slideshow"></div>
 <script>
@@ -89,13 +105,49 @@ body, html { margin:0; padding:0; height:100%; overflow:hidden; background:var(-
         }
 
         // 播放邏輯
-        let cur = 0, bgmPlayed = false;
+        let cur = 0;
         const slides = document.querySelectorAll('.slide');
+
+        // ---- 背景音樂：瀏覽器規定要「點擊或按鍵」後才能出聲 ----
+        const audio = document.getElementById('bgm');
+        const mbtn = document.getElementById('music-btn');
+        let playing = false, muted = false, broken = false, startedAt = 0;
+        function setBtn(icon, text) {
+            if (!mbtn) return;
+            mbtn.querySelector('.mi').textContent = icon;
+            mbtn.querySelector('.mt').textContent = text;
+            mbtn.classList.toggle('compact', playing && !broken);
+        }
+        function tryPlay() {
+            if (!audio || playing || muted || broken) return;
+            audio.volume = 0.6;
+            startedAt = Date.now();
+            audio.play().then(() => { playing = true; setBtn('🔊', ''); })
+                .catch(() => setBtn('🔇', '點一下畫面播放音樂'));
+        }
+        if (audio) {
+            setBtn('🔇', '點一下畫面播放音樂');
+            audio.addEventListener('error', () => {
+                broken = true;
+                setBtn('⚠️', `找不到音樂檔「${D.bgm}」`);
+            });
+            // 任何點擊或按鍵都會嘗試啟動音樂（滾輪不算，瀏覽器不承認）
+            document.addEventListener('pointerdown', tryPlay, true);
+            document.addEventListener('keydown', e => {
+                if (e.key === 'm' || e.key === 'M') { toggleMute(); return; }
+                tryPlay();
+            }, true);
+            tryPlay();   // 若瀏覽器允許，直接自動播放
+        }
+        function toggleMute() {
+            if (!audio || broken) return;
+            if (Date.now() - startedAt < 600) return;   // 這次點擊剛啟動音樂，不要馬上又關掉
+            if (playing) { audio.pause(); playing = false; muted = true; setBtn('🔇', '已靜音（按 M 或點此播放）'); }
+            else { muted = false; tryPlay(); }
+        }
+        if (mbtn) mbtn.addEventListener('click', e => { e.stopPropagation(); toggleMute(); });
+
         function go(n) {
-            if (!bgmPlayed && D.bgm) {
-                const audio = document.getElementById('bgm');
-                if (audio) { audio.volume = 0.6; audio.play().catch(() => {}); bgmPlayed = true; }
-            }
             if (n < 0) n = slides.length - 1;
             if (n >= slides.length) n = 0;
             slides.forEach((s, i) => s.classList.toggle('active', i === n));
